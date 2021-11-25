@@ -32,7 +32,7 @@ class Data:
     def affiche_base_faits(self):
         numBF = 1
         for j in self.bases_faits:
-            print('bases de faits '+ str(numBF)+':')
+            ('bases de faits '+ str(numBF)+':')
             numBF = numBF+1
             print('{', end='')
             for k in j.faits:
@@ -50,14 +50,9 @@ class Data:
             for i in self.regles:
                 if(premisses_existes(self.bases_faits[0].faits,i.premisses)):
                     echec = False
-                    add_conclusons_to_faits(self.bases_faits[0].faits,i.conclusions,i.num,logFile)
+                    add_conclusions_to_faits(self.bases_faits[0].faits,i.conclusions,i.num,logFile)
                     self.regles.remove(i)
-
-        logFile.write('base de faits :\n')
-        logFile.write('[')
-        for h in self.bases_faits[0].faits:
-            logFile.write('{'+h.fait+',explication : '+str(h.explication)+'}')
-        logFile.write(']\n')
+        write_base_in_file(self.bases_faits[0].faits, logFile)
         if (not bool):
             logFile.write('but : '+self.but+'\n')
             if (exist(self.bases_faits[0].faits,self.but)):
@@ -65,6 +60,49 @@ class Data:
             else:
                 logFile.write('resultat : echec')
         logFile.close()
+
+    def chainage_arriere(self):
+        logFile = open('logFile.txt', 'w')
+        logFile.write('avant chainage :\n')
+        write_base_in_file(self.bases_faits[0].faits,logFile)
+        logFile.write('but cherché : ' + self.but + '\n')
+        logFile.write('#######...............................\n')
+        if deep_search(self.regles,self.but,self.bases_faits[0].faits,logFile):
+            logFile.write("resultat : attend\n")
+        else:
+            logFile.write("resultat : non attend\n")
+        logFile.write('après chainage :\n')
+        write_base_in_file(self.bases_faits[0].faits,logFile)
+        logFile.close()
+
+
+
+def write_base_in_file(BF,logFile):
+    logFile.write('base de faits :\n')
+    logFile.write('[')
+    for h in BF:
+        logFile.write('{' + h.fait + ',explication : ' + str(h.explication) + '}')
+    logFile.write(']\n')
+
+def deep_search(regles,but,BF,file):
+        while (len(regles) > 0):
+            if (exist(BF,but)):
+                return True
+            for i in regles:
+                if (conclusons_exist(i.conclusions,but)):
+                    num_regle = i.num
+                    regles.remove(i)
+                    bool = True
+                    for k in i.premisses:
+                        bool=bool and deep_search(regles.copy(),k,BF,file)
+                        if not bool:
+                            break
+                    if bool:
+                        file.write(but + ' est verifié par la regle '+str(num_regle) + '\n')
+                        BF.append(Fait(but, num_regle))
+                        return True
+            return False
+        return False
 
 
 def exist(t,s):
@@ -84,8 +122,12 @@ def premisses_existes(t,p):
                 return False
     return True
 
-def add_conclusons_to_faits(BF,c,num,f):
+def add_conclusions_to_faits(BF,c,num,f):
     for i in c:
         f.write(i+ ' est ajouté à la base de faits on execute la regle r'+str(num)+'\n')
         # print(i+ ' est ajouté à la base de faits on execute la regle r'+str(num))
         BF.append(Fait(i,num))
+def conclusons_exist(T_conc,but):
+    for j in T_conc:
+        if j == but :
+            return True
